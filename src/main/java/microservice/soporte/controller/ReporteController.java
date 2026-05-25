@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import microservice.soporte.model.Reportes;
 import microservice.soporte.service.ReporteService;
 
@@ -23,7 +24,7 @@ public class ReporteController {
 
 
     @PostMapping
-    public Reportes postReporte(@RequestBody Reportes reportes) {
+    public Reportes postReporte(@Valid @RequestBody Reportes reportes) {
         return reporteService.crearReportes(reportes);
 }
 
@@ -33,7 +34,7 @@ public class ReporteController {
     }
 
     @PutMapping("{id}")
-    public Reportes putReportes(@PathVariable Long id, @RequestBody Reportes reportes) {
+    public Reportes putReportes(@PathVariable Long id, @Valid @RequestBody Reportes reportes) {
         return reporteService.updateReportes(id, reportes);
     }
 
