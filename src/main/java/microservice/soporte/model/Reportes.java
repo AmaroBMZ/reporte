@@ -1,5 +1,8 @@
 package microservice.soporte.model;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -26,6 +29,27 @@ public class Reportes {
     private Long idReporte;
 
     @Column(nullable = false)
+    @NotBlank(message = "El titulo es obligatorio")
+    private String titulo;
+
+    @Column(nullable = false)
+    @NotBlank(message = "El tipo es obligatorio")
+    private String tipo;
+
+    private LocalDateTime fechaGeneracion;
+
+    private LocalDate periodoInicio;
+
+    private LocalDate periodoFin;
+
+    @Column(nullable = false)
+    @NotBlank(message = "El formato es obligatorio")
+    private String formato;
+
+    @Column(nullable = false)
+    private String estado;
+
+    @Column(nullable = false)
     @NotBlank(message = "La fecha es obligatoria")
     private String fechaReporte;
 
@@ -41,25 +65,46 @@ public class Reportes {
     @NotBlank(message = "El estado es obligatorio")
     private String estadoReporte;
 
-    @Column
-    private String titulo;
-
-    @Column
-    private String tipo;
-
-    @Column
-    private String formato;
-
     public void generar() {
-        this.estadoReporte = "Generado";
+        generarReporte();
     }
 
     public void exportar() {
-        this.estadoReporte = "Exportado";
+        actualizarEstado("Exportado");
     }
 
     public String visualizar() {
-        return titulo + " - " + tipo + " - " + estadoReporte;
+        return consultarReporte();
+    }
+
+    public void generarReporte() {
+        if (fechaGeneracion == null) {
+            fechaGeneracion = LocalDateTime.now();
+        }
+        actualizarEstado("Generado");
+    }
+
+    public String consultarReporte() {
+        return titulo + " - " + tipo + " - " + estado;
+    }
+
+    public void actualizarEstado(String estado) {
+        this.estado = estado;
+        this.estadoReporte = estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+        if (estadoReporte == null || estadoReporte.isBlank()) {
+            estadoReporte = estado;
+        }
+    }
+
+    public void setEstadoReporte(String estadoReporte) {
+        this.estadoReporte = estadoReporte;
+        if (estado == null || estado.isBlank()) {
+            estado = estadoReporte;
+        }
     }
 
     @PrePersist
@@ -72,6 +117,18 @@ public class Reportes {
         }
         if (formato == null || formato.isBlank()) {
             formato = "JSON";
+        }
+        if (estado == null || estado.isBlank()) {
+            estado = estadoReporte;
+        }
+        if (estadoReporte == null || estadoReporte.isBlank()) {
+            estadoReporte = estado;
+        }
+        if (fechaReporte == null && fechaGeneracion != null) {
+            fechaReporte = fechaGeneracion.toLocalDate().toString();
+        }
+        if (fechaGeneracion == null) {
+            fechaGeneracion = LocalDateTime.now();
         }
     }
 }

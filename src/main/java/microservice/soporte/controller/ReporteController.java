@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import microservice.soporte.model.DetalleInventario;
+import microservice.soporte.model.DetalleSucursal;
+import microservice.soporte.model.DetalleVentas;
 import microservice.soporte.model.ExportacionReporte;
 import microservice.soporte.model.Metrica;
 import microservice.soporte.model.ReporteInventario;
@@ -88,6 +91,11 @@ public class ReporteController {
         return reporteService.obtenerMetricasPorReporte(id);
     }
 
+    @PutMapping("metricas/{id}")
+    public Metrica putMetrica(@PathVariable Long id, @Valid @RequestBody Metrica metrica) {
+        return reporteService.actualizarMetrica(id, metrica);
+    }
+
     @PostMapping("{id}/exportaciones")
     public ExportacionReporte postExportacion(
             @PathVariable Long id,
@@ -98,5 +106,35 @@ public class ReporteController {
     @GetMapping("{id}/exportaciones")
     public List<ExportacionReporte> getExportaciones(@PathVariable Long id) {
         return reporteService.obtenerExportacionesPorReporte(id);
+    }
+
+    @PostMapping("ventas/{id}/detalles")
+    public DetalleVentas postDetalleVentas(@PathVariable Long id, @Valid @RequestBody DetalleVentas detalle) {
+        return reporteService.agregarDetalleVentas(id, detalle);
+    }
+
+    @GetMapping("ventas/{id}/detalles")
+    public List<DetalleVentas> getDetallesVentas(@PathVariable Long id) {
+        return reporteService.obtenerDetallesVentas(id);
+    }
+
+    @PostMapping("inventario/{id}/detalles")
+    public DetalleInventario postDetalleInventario(@PathVariable Long id, @Valid @RequestBody DetalleInventario detalle) {
+        return reporteService.agregarDetalleInventario(id, detalle);
+    }
+
+    @GetMapping("inventario/{id}/detalles")
+    public List<DetalleInventario> getDetallesInventario(@PathVariable Long id) {
+        return reporteService.obtenerDetallesInventario(id);
+    }
+
+    @PostMapping("sucursal/{id}/detalles")
+    public DetalleSucursal postDetalleSucursal(@PathVariable Long id, @Valid @RequestBody DetalleSucursal detalle) {
+        return reporteService.agregarDetalleSucursal(id, detalle);
+    }
+
+    @GetMapping("sucursal/{id}/detalles")
+    public List<DetalleSucursal> getDetallesSucursal(@PathVariable Long id) {
+        return reporteService.obtenerDetallesSucursal(id);
     }
 }

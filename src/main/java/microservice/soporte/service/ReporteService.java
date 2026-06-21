@@ -8,12 +8,18 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import microservice.soporte.model.ExportacionReporte;
+import microservice.soporte.model.DetalleInventario;
+import microservice.soporte.model.DetalleSucursal;
+import microservice.soporte.model.DetalleVentas;
 import microservice.soporte.model.Metrica;
 import microservice.soporte.model.ReporteInventario;
 import microservice.soporte.model.ReporteSucursal;
 import microservice.soporte.model.ReporteVentas;
 import microservice.soporte.model.Reportes;
 import microservice.soporte.repository.ExportacionReporteRepository;
+import microservice.soporte.repository.DetalleInventarioRepository;
+import microservice.soporte.repository.DetalleSucursalRepository;
+import microservice.soporte.repository.DetalleVentasRepository;
 import microservice.soporte.repository.MetricaRepository;
 import microservice.soporte.repository.ReporteInventarioRepository;
 import microservice.soporte.repository.ReporteRepository;
@@ -41,7 +47,17 @@ public class ReporteService {
     @Autowired
     private ExportacionReporteRepository exportacionReporteRepository;
 
+    @Autowired
+    private DetalleVentasRepository detalleVentasRepository;
+
+    @Autowired
+    private DetalleInventarioRepository detalleInventarioRepository;
+
+    @Autowired
+    private DetalleSucursalRepository detalleSucursalRepository;
+
     public Reportes crearReportes(Reportes reporte){
+        reporte.completarDatosDelDiagrama();
         return reporteRepository.save(reporte);
     }
 
@@ -63,6 +79,10 @@ public class ReporteService {
             reporteExistente.setTitulo(reportes.getTitulo());
             reporteExistente.setTipo(reportes.getTipo());
             reporteExistente.setFormato(reportes.getFormato());
+            reporteExistente.setFechaGeneracion(reportes.getFechaGeneracion());
+            reporteExistente.setPeriodoInicio(reportes.getPeriodoInicio());
+            reporteExistente.setPeriodoFin(reportes.getPeriodoFin());
+            reporteExistente.setEstado(reportes.getEstado());
             return reporteRepository.save(reporteExistente);
         }
         return null;
@@ -73,6 +93,7 @@ public class ReporteService {
     }
 
     public ReporteVentas generarReporteVentas(ReporteVentas reporteVentas) {
+        vincularDetallesVentas(reporteVentas);
         reporteVentas.generarReporteVentas();
         return reporteVentasRepository.save(reporteVentas);
     }
@@ -82,6 +103,7 @@ public class ReporteService {
     }
 
     public ReporteInventario generarReporteInventario(ReporteInventario reporteInventario) {
+        vincularDetallesInventario(reporteInventario);
         reporteInventario.generarReporteInventario();
         return reporteInventarioRepository.save(reporteInventario);
     }
@@ -91,6 +113,7 @@ public class ReporteService {
     }
 
     public ReporteSucursal generarReporteSucursal(ReporteSucursal reporteSucursal) {
+        vincularDetallesSucursal(reporteSucursal);
         reporteSucursal.generarReporteSucursal();
         return reporteSucursalRepository.save(reporteSucursal);
     }
@@ -106,6 +129,16 @@ public class ReporteService {
         }
         metrica.setReporte(reporte);
         metrica.setFechaRegistro(LocalDateTime.now());
+        return metricaRepository.save(metrica);
+    }
+
+    public Metrica actualizarMetrica(Long idMetrica, Metrica datos) {
+        Metrica metrica = metricaRepository.findById(idMetrica).orElse(null);
+        if (metrica == null) {
+            return null;
+        }
+        metrica.setNombre(datos.getNombre());
+        metrica.actualizarMetrica(datos.getValor(), datos.getUnidad());
         return metricaRepository.save(metrica);
     }
 
@@ -133,5 +166,65 @@ public class ReporteService {
 
     public List<ExportacionReporte> obtenerExportacionesPorReporte(Long idReporte) {
         return exportacionReporteRepository.findByReporteIdReporte(idReporte);
+    }
+
+    public DetalleVentas agregarDetalleVentas(Long idReporte, DetalleVentas detalle) {
+        ReporteVentas reporte = reporteVentasRepository.findById(idReporte).orElse(null);
+        if (reporte == null) {
+            return null;
+        }
+        detalle.setReporteVentas(reporte);
+        detalle.agregarDetalle();
+        return detalleVentasRepository.save(detalle);
+    }
+
+    public List<DetalleVentas> obtenerDetallesVentas(Long idReporte) {
+        return detalleVentasRepository.findByIdReporte(idReporte);
+    }
+
+    public DetalleInventario agregarDetalleInventario(Long idReporte, DetalleInventario detalle) {
+        ReporteInventario reporte = reporteInventarioRepository.findById(idReporte).orElse(null);
+        if (reporte == null) {
+            return null;
+        }
+        detalle.setReporteInventario(reporte);
+        detalle.agregarDetalle();
+        return detalleInventarioRepository.save(detalle);
+    }
+
+    public List<DetalleInventario> obtenerDetallesInventario(Long idReporte) {
+        return detalleInventarioRepository.findByIdReporte(idReporte);
+    }
+
+    public DetalleSucursal agregarDetalleSucursal(Long idReporte, DetalleSucursal detalle) {
+        ReporteSucursal reporte = reporteSucursalRepository.findById(idReporte).orElse(null);
+        if (reporte == null) {
+            return null;
+        }
+        detalle.setReporteSucursal(reporte);
+        detalle.agregarDetalle();
+        return detalleSucursalRepository.save(detalle);
+    }
+
+    public List<DetalleSucursal> obtenerDetallesSucursal(Long idReporte) {
+        return detalleSucursalRepository.findByIdReporte(idReporte);
+    }
+
+    private void vincularDetallesVentas(ReporteVentas reporteVentas) {
+        if (reporteVentas.getDetalles() != null) {
+            reporteVentas.getDetalles().forEach(detalle -> detalle.setReporteVentas(reporteVentas));
+        }
+    }
+
+    private void vincularDetallesInventario(ReporteInventario reporteInventario) {
+        if (reporteInventario.getDetalles() != null) {
+            reporteInventario.getDetalles().forEach(detalle -> detalle.setReporteInventario(reporteInventario));
+        }
+    }
+
+    private void vincularDetallesSucursal(ReporteSucursal reporteSucursal) {
+        if (reporteSucursal.getDetalles() != null) {
+            reporteSucursal.getDetalles().forEach(detalle -> detalle.setReporteSucursal(reporteSucursal));
+        }
     }
 }

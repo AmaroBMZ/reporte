@@ -24,6 +24,9 @@ public class Metrica {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idMetrica;
 
+    @Column(name = "id_reporte", insertable = false, updatable = false)
+    private Long idReporte;
+
     @Column(nullable = false)
     @NotBlank(message = "El nombre de la metrica es obligatorio")
     private String nombre;
@@ -44,7 +47,22 @@ public class Metrica {
         return valor;
     }
 
+    public double calcularMetrica() {
+        return calcular();
+    }
+
+    public void actualizarMetrica(double valor, String unidad) {
+        this.valor = valor;
+        this.unidad = unidad;
+        this.fechaRegistro = LocalDateTime.now();
+    }
+
     public String visualizar() {
         return nombre + ": " + valor + " " + unidad;
+    }
+
+    public void setReporte(Reportes reporte) {
+        this.reporte = reporte;
+        this.idReporte = reporte != null ? reporte.getIdReporte() : null;
     }
 }

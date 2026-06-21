@@ -90,6 +90,16 @@ class ReporteControllerTest {
     }
 
     @Test
+    void getReportesVentasDebeRetornarLista() throws Exception {
+        when(reporteService.obtenerReportesVentas()).thenReturn(List.of(crearReporteVentas()));
+
+        mockMvc.perform(get("/api/v1/reportes/ventas"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].periodo").value("2026-06"));
+    }
+
+    @Test
     void postReporteInventarioDebeGenerarReporte() throws Exception {
         when(reporteService.generarReporteInventario(any(ReporteInventario.class))).thenReturn(crearReporteInventario());
 
@@ -98,6 +108,16 @@ class ReporteControllerTest {
                 .content(jsonReporteInventario()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tipo").value("Inventario"));
+    }
+
+    @Test
+    void getReportesInventarioDebeRetornarLista() throws Exception {
+        when(reporteService.obtenerReportesInventario()).thenReturn(List.of(crearReporteInventario()));
+
+        mockMvc.perform(get("/api/v1/reportes/inventario"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].totalProductos").value(100));
     }
 
     @Test
@@ -112,6 +132,16 @@ class ReporteControllerTest {
     }
 
     @Test
+    void getReportesSucursalDebeRetornarLista() throws Exception {
+        when(reporteService.obtenerReportesSucursal()).thenReturn(List.of(crearReporteSucursal()));
+
+        mockMvc.perform(get("/api/v1/reportes/sucursal"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].nombreSucursal").value("Sucursal Centro"));
+    }
+
+    @Test
     void postMetricaDebeAgregarMetrica() throws Exception {
         when(reporteService.agregarMetrica(eq(1L), any(Metrica.class))).thenReturn(crearMetrica());
 
@@ -123,6 +153,16 @@ class ReporteControllerTest {
     }
 
     @Test
+    void getMetricasDebeRetornarLista() throws Exception {
+        when(reporteService.obtenerMetricasPorReporte(1L)).thenReturn(List.of(crearMetrica()));
+
+        mockMvc.perform(get("/api/v1/reportes/1/metricas"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].unidad").value("CLP"));
+    }
+
+    @Test
     void postExportacionDebeExportarReporte() throws Exception {
         when(reporteService.exportarReporte(eq(1L), any(ExportacionReporte.class))).thenReturn(crearExportacion());
 
@@ -131,6 +171,16 @@ class ReporteControllerTest {
                 .content(jsonExportacion()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.formato").value("PDF"));
+    }
+
+    @Test
+    void getExportacionesDebeRetornarLista() throws Exception {
+        when(reporteService.obtenerExportacionesPorReporte(1L)).thenReturn(List.of(crearExportacion()));
+
+        mockMvc.perform(get("/api/v1/reportes/1/exportaciones"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].estado").value("Exportado"));
     }
 
     private Reportes crearReporte() {

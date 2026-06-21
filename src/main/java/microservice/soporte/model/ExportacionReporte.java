@@ -24,6 +24,9 @@ public class ExportacionReporte {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idExportacion;
 
+    @Column(name = "id_reporte", insertable = false, updatable = false)
+    private Long idReporte;
+
     @Column(nullable = false)
     @NotBlank(message = "El formato es obligatorio")
     private String formato;
@@ -53,5 +56,14 @@ public class ExportacionReporte {
 
     public String descargar() {
         return rutaArchivo;
+    }
+
+    public String descargarArchivo() {
+        return rutaArchivo;
+    }
+
+    public void setReporte(Reportes reporte) {
+        this.reporte = reporte;
+        this.idReporte = reporte != null ? reporte.getIdReporte() : null;
     }
 }

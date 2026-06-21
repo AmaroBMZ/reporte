@@ -9,6 +9,9 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import microservice.soporte.model.DetalleInventario;
+import microservice.soporte.model.DetalleSucursal;
+import microservice.soporte.model.DetalleVentas;
 import microservice.soporte.model.ExportacionReporte;
 import microservice.soporte.model.Metrica;
 import microservice.soporte.model.ReporteInventario;
@@ -16,6 +19,9 @@ import microservice.soporte.model.ReporteSucursal;
 import microservice.soporte.model.ReporteVentas;
 import microservice.soporte.model.Reportes;
 import microservice.soporte.repository.ExportacionReporteRepository;
+import microservice.soporte.repository.DetalleInventarioRepository;
+import microservice.soporte.repository.DetalleSucursalRepository;
+import microservice.soporte.repository.DetalleVentasRepository;
 import microservice.soporte.repository.MetricaRepository;
 import microservice.soporte.repository.ReporteInventarioRepository;
 import microservice.soporte.repository.ReporteRepository;
@@ -47,6 +53,15 @@ class ReporteServiceTest {
 
     @Mock
     private ExportacionReporteRepository exportacionReporteRepository;
+
+    @Mock
+    private DetalleVentasRepository detalleVentasRepository;
+
+    @Mock
+    private DetalleInventarioRepository detalleInventarioRepository;
+
+    @Mock
+    private DetalleSucursalRepository detalleSucursalRepository;
 
     @InjectMocks
     private ReporteService reporteService;
@@ -97,6 +112,7 @@ class ReporteServiceTest {
         cambios.setTipo("Sucursal");
         cambios.setFormato("PDF");
         cambios.setEstadoReporte("Generado");
+        cambios.setEstado("Generado");
 
         when(reporteRepository.findById(1L)).thenReturn(Optional.of(existente));
         when(reporteRepository.save(existente)).thenReturn(existente);
@@ -107,6 +123,7 @@ class ReporteServiceTest {
         assertEquals("Sucursal", resultado.getTipo());
         assertEquals("PDF", resultado.getFormato());
         assertEquals("Generado", resultado.getEstadoReporte());
+        assertEquals("Generado", resultado.getEstado());
     }
 
     @Test
@@ -205,12 +222,105 @@ class ReporteServiceTest {
     }
 
     @Test
+    void exportarReporteMantieneRutaExistente() {
+        ExportacionReporte exportacion = crearExportacion();
+        exportacion.setRutaArchivo("exportados/reporte-final.pdf");
+        Reportes reporte = crearReporte();
+        when(reporteRepository.findById(1L)).thenReturn(Optional.of(reporte));
+        when(exportacionReporteRepository.save(any(ExportacionReporte.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ExportacionReporte resultado = reporteService.exportarReporte(1L, exportacion);
+
+        assertEquals("exportados/reporte-final.pdf", resultado.getRutaArchivo());
+        verify(reporteRepository).save(reporte);
+    }
+
+    @Test
     void exportarReporteDebeRetornarNullSiReporteNoExiste() {
         when(reporteRepository.findById(99L)).thenReturn(Optional.empty());
 
         ExportacionReporte resultado = reporteService.exportarReporte(99L, crearExportacion());
 
         assertNull(resultado);
+    }
+
+    @Test
+    void obtenerExportacionesPorReporteDebeConsultarRepositorio() {
+        when(exportacionReporteRepository.findByReporteIdReporte(1L)).thenReturn(List.of(crearExportacion()));
+
+        List<ExportacionReporte> resultado = reporteService.obtenerExportacionesPorReporte(1L);
+
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    void actualizarMetricaDebeModificarValores() {
+        Metrica existente = crearMetrica();
+        Metrica cambios = crearMetrica();
+        cambios.setNombre("Margen");
+        cambios.setValor(42.0);
+        cambios.setUnidad("%");
+        when(metricaRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(metricaRepository.save(existente)).thenReturn(existente);
+
+        Metrica resultado = reporteService.actualizarMetrica(1L, cambios);
+
+        assertEquals("Margen", resultado.getNombre());
+        assertEquals(42.0, resultado.getValor());
+        assertEquals("%", resultado.getUnidad());
+        assertNotNull(resultado.getFechaRegistro());
+    }
+
+    @Test
+    void actualizarMetricaDebeRetornarNullSiNoExiste() {
+        when(metricaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertNull(reporteService.actualizarMetrica(99L, crearMetrica()));
+    }
+
+    @Test
+    void detallesDeleganYSeAsocianAReporte() {
+        ReporteVentas ventas = crearReporteVentas();
+        ReporteInventario inventario = crearReporteInventario();
+        ReporteSucursal sucursal = crearReporteSucursal();
+        DetalleVentas detalleVentas = new DetalleVentas();
+        detalleVentas.setMontoNeto(100);
+        detalleVentas.setImpuestos(19);
+        DetalleInventario detalleInventario = new DetalleInventario();
+        detalleInventario.setStockActual(3);
+        detalleInventario.setStockMinimo(5);
+        DetalleSucursal detalleSucursal = new DetalleSucursal();
+
+        when(reporteVentasRepository.findById(1L)).thenReturn(Optional.of(ventas));
+        when(reporteInventarioRepository.findById(1L)).thenReturn(Optional.of(inventario));
+        when(reporteSucursalRepository.findById(1L)).thenReturn(Optional.of(sucursal));
+        when(detalleVentasRepository.save(detalleVentas)).thenReturn(detalleVentas);
+        when(detalleInventarioRepository.save(detalleInventario)).thenReturn(detalleInventario);
+        when(detalleSucursalRepository.save(detalleSucursal)).thenReturn(detalleSucursal);
+        when(detalleVentasRepository.findByIdReporte(1L)).thenReturn(List.of(detalleVentas));
+        when(detalleInventarioRepository.findByIdReporte(1L)).thenReturn(List.of(detalleInventario));
+        when(detalleSucursalRepository.findByIdReporte(1L)).thenReturn(List.of(detalleSucursal));
+
+        assertEquals(119.0, reporteService.agregarDetalleVentas(1L, detalleVentas).getTotal());
+        assertEquals(ventas, detalleVentas.getReporteVentas());
+        assertEquals(true, reporteService.agregarDetalleInventario(1L, detalleInventario).verificarStockBajo());
+        assertEquals(inventario, detalleInventario.getReporteInventario());
+        assertNotNull(reporteService.agregarDetalleSucursal(1L, detalleSucursal).getFechaRegistro());
+        assertEquals(sucursal, detalleSucursal.getReporteSucursal());
+        assertEquals(1, reporteService.obtenerDetallesVentas(1L).size());
+        assertEquals(1, reporteService.obtenerDetallesInventario(1L).size());
+        assertEquals(1, reporteService.obtenerDetallesSucursal(1L).size());
+    }
+
+    @Test
+    void detallesRetornanNullSiReporteNoExiste() {
+        when(reporteVentasRepository.findById(99L)).thenReturn(Optional.empty());
+        when(reporteInventarioRepository.findById(99L)).thenReturn(Optional.empty());
+        when(reporteSucursalRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertNull(reporteService.agregarDetalleVentas(99L, new DetalleVentas()));
+        assertNull(reporteService.agregarDetalleInventario(99L, new DetalleInventario()));
+        assertNull(reporteService.agregarDetalleSucursal(99L, new DetalleSucursal()));
     }
 
     private Reportes crearReporte() {
@@ -220,6 +330,7 @@ class ReporteServiceTest {
         reporte.setRazonReporte("Reporte mensual");
         reporte.setDescripcionReporte("Revision de indicadores");
         reporte.setEstadoReporte("Pendiente");
+        reporte.setEstado("Pendiente");
         reporte.setTitulo("Reporte mensual");
         reporte.setTipo("General");
         reporte.setFormato("JSON");
@@ -260,6 +371,7 @@ class ReporteServiceTest {
         reporte.setRazonReporte("Reporte mensual");
         reporte.setDescripcionReporte("Revision de indicadores");
         reporte.setEstadoReporte("Pendiente");
+        reporte.setEstado("Pendiente");
         reporte.setTitulo("Reporte mensual");
         reporte.setTipo("General");
         reporte.setFormato("JSON");
