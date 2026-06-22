@@ -7,15 +7,15 @@ El diagrama de clases adjunto representa el dominio de reportes y sus responsabi
 ## Estructura Del Proyecto
 
 ```text
-src/main/java/microservice/soporte
+src/main/java/microservice/reporte
 |-- controller/ReporteController.java
 |-- model/Reportes.java
 |-- repository/ReporteRepository.java
 |-- service/ReporteService.java
-|-- SoporteApplication.java
+|-- ReporteApplication.java
 
-src/test/java/microservice/soporte
-|-- SoporteApplicationTests.java
+src/test/java/microservice/reporte
+|-- ReporteApplicationTests.java
 ```
 
 ## Clases Principales Implementadas
@@ -304,17 +304,17 @@ En Linux o macOS:
 Actualmente el proyecto incluye la clase:
 
 ```text
-src/test/java/microservice/soporte/SoporteApplicationTests.java
-src/test/java/microservice/soporte/service/ReporteServiceTest.java
+src/test/java/microservice/reporte/ReporteApplicationTests.java
+src/test/java/microservice/reporte/service/ReporteServiceTest.java
 src/test/resources/application-test.properties
 ```
 
-`SoporteApplicationTests` verifica que el contexto de Spring Boot cargue correctamente usando el perfil `test` con base de datos H2 en memoria, por lo que las pruebas no dependen de MySQL local.
+`ReporteApplicationTests` verifica que el contexto de Spring Boot cargue correctamente usando el perfil `test` con base de datos H2 en memoria, por lo que las pruebas no dependen de MySQL local.
 
 ```java
 @SpringBootTest
 @ActiveProfiles("test")
-class SoporteApplicationTests {
+class ReporteApplicationTests {
 
     @Test
     void contextLoads() {
