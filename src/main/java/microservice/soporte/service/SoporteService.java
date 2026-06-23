@@ -2,9 +2,12 @@ package microservice.soporte.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import microservice.soporte.client.DatosExternosClient;
+import microservice.soporte.dto.TicketDetalleResponse;
 import microservice.soporte.model.CategoriaSoporte;
 import microservice.soporte.model.RespuestaTicket;
 import microservice.soporte.model.TicketSoporte;
@@ -18,6 +21,9 @@ public class SoporteService {
     private final TicketSoporteRepository ticketRepository;
     private final CategoriaSoporteRepository categoriaRepository;
     private final RespuestaTicketRepository respuestaRepository;
+
+    @Autowired
+    private DatosExternosClient datosExternosClient;
 
     public SoporteService(
             TicketSoporteRepository ticketRepository,
@@ -35,12 +41,22 @@ public class SoporteService {
         return ticketRepository.save(ticket);
     }
 
+    public TicketDetalleResponse crearTicketConDetalle(TicketSoporte ticket) {
+        TicketSoporte ticketGuardado = crearTicket(ticket);
+        return construirDetalle(ticketGuardado);
+    }
+
     public List<TicketSoporte> obtenerTickets() {
         return ticketRepository.findAll();
     }
 
     public TicketSoporte obtenerTicketPorId(Long id) {
         return ticketRepository.findById(id).orElse(null);
+    }
+
+    public TicketDetalleResponse obtenerTicketDetalle(Long id) {
+        TicketSoporte ticket = obtenerTicketPorId(id);
+        return ticket == null ? null : construirDetalle(ticket);
     }
 
     public List<TicketSoporte> obtenerTicketsPorCliente(Long idCliente) {
@@ -187,5 +203,12 @@ public class SoporteService {
         if (ticket.getRespuestas() != null) {
             ticket.getRespuestas().forEach(respuesta -> respuesta.setTicket(ticket));
         }
+    }
+
+    private TicketDetalleResponse construirDetalle(TicketSoporte ticket) {
+        return new TicketDetalleResponse(
+                ticket,
+                datosExternosClient.obtenerCliente(ticket.getIdCliente()),
+                datosExternosClient.obtenerUsuario(ticket.getIdUsuarioAsignado()));
     }
 }

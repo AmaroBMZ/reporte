@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import microservice.soporte.dto.TicketDetalleResponse;
 import microservice.soporte.model.CategoriaSoporte;
 import microservice.soporte.model.RespuestaTicket;
 import microservice.soporte.model.TicketSoporte;
@@ -33,6 +34,11 @@ public class SoporteController {
         return soporteService.crearTicket(ticket);
     }
 
+    @PostMapping("tickets/detalle")
+    public TicketDetalleResponse crearTicketConDetalle(@Valid @RequestBody TicketSoporte ticket) {
+        return soporteService.crearTicketConDetalle(ticket);
+    }
+
     @GetMapping("tickets")
     public List<TicketSoporte> obtenerTickets() {
         return soporteService.obtenerTickets();
@@ -41,6 +47,11 @@ public class SoporteController {
     @GetMapping("tickets/{id}")
     public TicketSoporte obtenerTicket(@PathVariable Long id) {
         return soporteService.obtenerTicketPorId(id);
+    }
+
+    @GetMapping("tickets/{id}/detalle")
+    public TicketDetalleResponse obtenerTicketDetalle(@PathVariable Long id) {
+        return soporteService.obtenerTicketDetalle(id);
     }
 
     @GetMapping("tickets/cliente/{idCliente}")
