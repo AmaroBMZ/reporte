@@ -1,6 +1,8 @@
 package microservice.reporte.service;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,31 @@ public class ReporteService {
     public Reportes crearReportes(Reportes reporte){
         reporte.completarDatosDelDiagrama();
         return reporteRepository.save(reporte);
+    }
+
+    public List<Reportes> cargarDatosDemo() {
+        List<Reportes> reportesExistentes = reporteRepository.findAll();
+        if (!reportesExistentes.isEmpty()) {
+            return reportesExistentes;
+        }
+
+        Reportes general = crearReportes(crearReporteGeneralDemo());
+        ReporteVentas ventas = generarReporteVentas(crearReporteVentasDemo());
+        ReporteInventario inventario = generarReporteInventario(crearReporteInventarioDemo());
+        ReporteSucursal sucursal = generarReporteSucursal(crearReporteSucursalDemo());
+
+        Metrica metrica = new Metrica();
+        metrica.setNombre("Ventas del mes");
+        metrica.setValor(ventas.calcularTotales());
+        metrica.setUnidad("CLP");
+        agregarMetrica(general.getIdReporte(), metrica);
+
+        ExportacionReporte exportacion = new ExportacionReporte();
+        exportacion.setFormato("PDF");
+        exportacion.setEstado("Pendiente");
+        exportarReporte(general.getIdReporte(), exportacion);
+
+        return List.of(general, ventas, inventario, sucursal);
     }
 
     public List<Reportes> obtenerReportes() {
@@ -226,5 +253,78 @@ public class ReporteService {
         if (reporteSucursal.getDetalles() != null) {
             reporteSucursal.getDetalles().forEach(detalle -> detalle.setReporteSucursal(reporteSucursal));
         }
+    }
+
+    private Reportes crearReporteGeneralDemo() {
+        Reportes reporte = new Reportes();
+        completarBaseDemo(reporte, "Reporte general Perfulandia", "General");
+        reporte.setRazonReporte("Resumen operativo demo");
+        reporte.setDescripcionReporte("Reporte inicial con datos de prueba para validar el microservicio");
+        return reporte;
+    }
+
+    private ReporteVentas crearReporteVentasDemo() {
+        ReporteVentas reporte = new ReporteVentas();
+        completarBaseDemo(reporte, "Reporte ventas demo", "Ventas");
+        reporte.setTotalVentas(350000);
+        reporte.setCantidadVentas(14);
+        reporte.setPeriodo("2026-06");
+        reporte.setIdSucursal(1);
+        reporte.setDetalles(new ArrayList<>());
+
+        DetalleVentas detalle = new DetalleVentas();
+        detalle.setIdVenta(1001L);
+        detalle.setFechaVenta(LocalDateTime.now());
+        detalle.setMontoNeto(294118);
+        detalle.setImpuestos(55882);
+        reporte.getDetalles().add(detalle);
+        return reporte;
+    }
+
+    private ReporteInventario crearReporteInventarioDemo() {
+        ReporteInventario reporte = new ReporteInventario();
+        completarBaseDemo(reporte, "Reporte inventario demo", "Inventario");
+        reporte.setTotalProductos(120);
+        reporte.setStockBajo(8);
+        reporte.setMovimientos(32);
+        reporte.setFechaCorte(LocalDate.now());
+        reporte.setDetalles(new ArrayList<>());
+
+        DetalleInventario detalle = new DetalleInventario();
+        detalle.setIdProducto(501L);
+        detalle.setIdSucursal(1L);
+        detalle.setStockActual(4);
+        detalle.setStockMinimo(10);
+        detalle.setCantidadMovimientos(3);
+        reporte.getDetalles().add(detalle);
+        return reporte;
+    }
+
+    private ReporteSucursal crearReporteSucursalDemo() {
+        ReporteSucursal reporte = new ReporteSucursal();
+        completarBaseDemo(reporte, "Reporte sucursal demo", "Sucursal");
+        reporte.setIdSucursal(1);
+        reporte.setNombreSucursal("Sucursal Centro");
+        reporte.setVentasSucursal(350000);
+        reporte.setRendimiento(91.5);
+        reporte.setDetalles(new ArrayList<>());
+
+        DetalleSucursal detalle = new DetalleSucursal();
+        detalle.setIdSucursal(1L);
+        detalle.setVentas(350000);
+        detalle.setRendimiento(91.5);
+        reporte.getDetalles().add(detalle);
+        return reporte;
+    }
+
+    private void completarBaseDemo(Reportes reporte, String titulo, String tipo) {
+        reporte.setTitulo(titulo);
+        reporte.setTipo(tipo);
+        reporte.setFormato("JSON");
+        reporte.setEstado("Pendiente");
+        reporte.setEstadoReporte("Pendiente");
+        reporte.setFechaReporte(LocalDate.now().toString());
+        reporte.setRazonReporte(titulo);
+        reporte.setDescripcionReporte("Datos demo generados automaticamente");
     }
 }

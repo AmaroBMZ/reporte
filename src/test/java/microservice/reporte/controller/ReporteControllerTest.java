@@ -13,12 +13,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.Map;
+import microservice.reporte.dto.ResumenMicroservicios;
+import microservice.reporte.model.DetalleInventario;
+import microservice.reporte.model.DetalleSucursal;
+import microservice.reporte.model.DetalleVentas;
 import microservice.reporte.model.ExportacionReporte;
 import microservice.reporte.model.Metrica;
 import microservice.reporte.model.ReporteInventario;
 import microservice.reporte.model.ReporteSucursal;
 import microservice.reporte.model.ReporteVentas;
 import microservice.reporte.model.Reportes;
+import microservice.reporte.service.ReporteIntegracionService;
 import microservice.reporte.service.ReporteService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +41,9 @@ class ReporteControllerTest {
 
     @MockitoBean
     private ReporteService reporteService;
+
+    @MockitoBean
+    private ReporteIntegracionService reporteIntegracionService;
 
     @Test
     void postReporteDebeCrearReporte() throws Exception {
@@ -183,6 +192,88 @@ class ReporteControllerTest {
             .andExpect(jsonPath("$[0].estado").value("Exportado"));
     }
 
+    @Test
+    void putMetricaDebeActualizarMetrica() throws Exception {
+        Metrica metrica = crearMetrica();
+        metrica.setUnidad("%");
+        when(reporteService.actualizarMetrica(eq(1L), any(Metrica.class))).thenReturn(metrica);
+
+        mockMvc.perform(put("/api/v1/reportes/metricas/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonMetrica()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.unidad").value("%"));
+    }
+
+    @Test
+    void detallesVentasDeleganEnServicio() throws Exception {
+        DetalleVentas detalle = crearDetalleVentas();
+        when(reporteService.agregarDetalleVentas(eq(1L), any(DetalleVentas.class))).thenReturn(detalle);
+        when(reporteService.obtenerDetallesVentas(1L)).thenReturn(List.of(detalle));
+
+        mockMvc.perform(post("/api/v1/reportes/ventas/1/detalles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonDetalleVentas()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1190.0));
+
+        mockMvc.perform(get("/api/v1/reportes/ventas/1/detalles"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].idVenta").value(99));
+    }
+
+    @Test
+    void detallesInventarioDeleganEnServicio() throws Exception {
+        DetalleInventario detalle = crearDetalleInventario();
+        when(reporteService.agregarDetalleInventario(eq(1L), any(DetalleInventario.class))).thenReturn(detalle);
+        when(reporteService.obtenerDetallesInventario(1L)).thenReturn(List.of(detalle));
+
+        mockMvc.perform(post("/api/v1/reportes/inventario/1/detalles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonDetalleInventario()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.stockActual").value(4));
+
+        mockMvc.perform(get("/api/v1/reportes/inventario/1/detalles"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].idProducto").value(501));
+    }
+
+    @Test
+    void detallesSucursalDeleganEnServicio() throws Exception {
+        DetalleSucursal detalle = crearDetalleSucursal();
+        when(reporteService.agregarDetalleSucursal(eq(1L), any(DetalleSucursal.class))).thenReturn(detalle);
+        when(reporteService.obtenerDetallesSucursal(1L)).thenReturn(List.of(detalle));
+
+        mockMvc.perform(post("/api/v1/reportes/sucursal/1/detalles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonDetalleSucursal()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ventas").value(250000.0));
+
+        mockMvc.perform(get("/api/v1/reportes/sucursal/1/detalles"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].idSucursal").value(1));
+    }
+
+    @Test
+    void getResumenMicroserviciosDebeRetornarDatosIntegrados() throws Exception {
+        ResumenMicroservicios resumen = new ResumenMicroservicios(
+                List.of(Map.of("idVenta", 1)),
+                List.of(Map.of("idProducto", 501)),
+                List.of(Map.of("idSucursal", 1)));
+        when(reporteIntegracionService.obtenerResumenMicroservicios()).thenReturn(resumen);
+
+        mockMvc.perform(get("/api/v1/reportes/integraciones/resumen"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ventas", hasSize(1)))
+            .andExpect(jsonPath("$.inventario", hasSize(1)))
+            .andExpect(jsonPath("$.sucursales", hasSize(1)));
+    }
+
     private Reportes crearReporte() {
         Reportes reporte = new Reportes();
         completarBase(reporte, "General");
@@ -243,6 +334,33 @@ class ReporteControllerTest {
         exportacion.setEstado("Exportado");
         exportacion.setRutaArchivo("reportes/1.pdf");
         return exportacion;
+    }
+
+    private DetalleVentas crearDetalleVentas() {
+        DetalleVentas detalle = new DetalleVentas();
+        detalle.setIdVenta(99L);
+        detalle.setMontoNeto(1000);
+        detalle.setImpuestos(190);
+        detalle.calcularTotal();
+        return detalle;
+    }
+
+    private DetalleInventario crearDetalleInventario() {
+        DetalleInventario detalle = new DetalleInventario();
+        detalle.setIdProducto(501L);
+        detalle.setIdSucursal(1L);
+        detalle.setStockActual(4);
+        detalle.setStockMinimo(5);
+        detalle.setCantidadMovimientos(2);
+        return detalle;
+    }
+
+    private DetalleSucursal crearDetalleSucursal() {
+        DetalleSucursal detalle = new DetalleSucursal();
+        detalle.setIdSucursal(1L);
+        detalle.setVentas(250000);
+        detalle.setRendimiento(92.5);
+        return detalle;
     }
 
     private String jsonReporte() {
@@ -327,6 +445,39 @@ class ReporteControllerTest {
             {
               "formato": "PDF",
               "estado": "Pendiente"
+            }
+            """;
+    }
+
+    private String jsonDetalleVentas() {
+        return """
+            {
+              "idVenta": 99,
+              "montoNeto": 1000,
+              "impuestos": 190,
+              "total": 1190
+            }
+            """;
+    }
+
+    private String jsonDetalleInventario() {
+        return """
+            {
+              "idProducto": 501,
+              "idSucursal": 1,
+              "stockActual": 4,
+              "stockMinimo": 5,
+              "cantidadMovimientos": 2
+            }
+            """;
+    }
+
+    private String jsonDetalleSucursal() {
+        return """
+            {
+              "idSucursal": 1,
+              "ventas": 250000,
+              "rendimiento": 92.5
             }
             """;
     }

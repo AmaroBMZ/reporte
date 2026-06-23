@@ -323,6 +323,46 @@ class ReporteServiceTest {
         assertNull(reporteService.agregarDetalleSucursal(99L, new DetalleSucursal()));
     }
 
+    @Test
+    void cargarDatosDemoRetornaExistentesSiYaHayReportes() {
+        List<Reportes> existentes = List.of(crearReporte());
+        when(reporteRepository.findAll()).thenReturn(existentes);
+
+        List<Reportes> resultado = reporteService.cargarDatosDemo();
+
+        assertEquals(existentes, resultado);
+    }
+
+    @Test
+    void cargarDatosDemoInsertaReportesRelacionesMetricasYExportacion() {
+        Reportes[] generalGuardado = new Reportes[1];
+        when(reporteRepository.findAll()).thenReturn(List.of());
+        when(reporteRepository.save(any(Reportes.class))).thenAnswer(invocation -> {
+            Reportes reporte = invocation.getArgument(0);
+            if (reporte.getIdReporte() == null) {
+                reporte.setIdReporte(1L);
+            }
+            generalGuardado[0] = reporte;
+            return reporte;
+        });
+        when(reporteVentasRepository.save(any(ReporteVentas.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reporteInventarioRepository.save(any(ReporteInventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reporteSucursalRepository.save(any(ReporteSucursal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reporteRepository.findById(1L)).thenAnswer(invocation -> Optional.of(generalGuardado[0]));
+        when(metricaRepository.save(any(Metrica.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(exportacionReporteRepository.save(any(ExportacionReporte.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<Reportes> resultado = reporteService.cargarDatosDemo();
+
+        assertEquals(4, resultado.size());
+        assertEquals("Reporte general Perfulandia", resultado.get(0).getTitulo());
+        assertEquals("Ventas", resultado.get(1).getTipo());
+        assertEquals("Inventario", resultado.get(2).getTipo());
+        assertEquals("Sucursal", resultado.get(3).getTipo());
+        verify(metricaRepository).save(any(Metrica.class));
+        verify(exportacionReporteRepository).save(any(ExportacionReporte.class));
+    }
+
     private Reportes crearReporte() {
         Reportes reporte = new Reportes();
         reporte.setIdReporte(1L);

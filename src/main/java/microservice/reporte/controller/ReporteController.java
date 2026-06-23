@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import microservice.reporte.dto.ResumenMicroservicios;
 import microservice.reporte.model.DetalleInventario;
 import microservice.reporte.model.DetalleSucursal;
 import microservice.reporte.model.DetalleVentas;
@@ -22,6 +23,7 @@ import microservice.reporte.model.ReporteInventario;
 import microservice.reporte.model.ReporteSucursal;
 import microservice.reporte.model.ReporteVentas;
 import microservice.reporte.model.Reportes;
+import microservice.reporte.service.ReporteIntegracionService;
 import microservice.reporte.service.ReporteService;
 
 @RestController
@@ -29,6 +31,9 @@ import microservice.reporte.service.ReporteService;
 public class ReporteController {
     @Autowired
     private ReporteService reporteService;
+
+    @Autowired
+    private ReporteIntegracionService reporteIntegracionService;
 
 
     @PostMapping
@@ -136,5 +141,10 @@ public class ReporteController {
     @GetMapping("sucursal/{id}/detalles")
     public List<DetalleSucursal> getDetallesSucursal(@PathVariable Long id) {
         return reporteService.obtenerDetallesSucursal(id);
+    }
+
+    @GetMapping("integraciones/resumen")
+    public ResumenMicroservicios getResumenMicroservicios() {
+        return reporteIntegracionService.obtenerResumenMicroservicios();
     }
 }

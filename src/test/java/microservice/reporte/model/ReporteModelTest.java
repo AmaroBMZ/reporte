@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -156,6 +157,127 @@ class ReporteModelTest {
 
         assertNotNull(detalleSucursal.getFechaRegistro());
         assertEquals(3L, detalleSucursal.getIdReporte());
+    }
+
+    @Test
+    void reportesCompletaEstadosYFechaDesdeCamposDisponibles() {
+        Reportes conEstadoReporte = new Reportes(
+                1L,
+                "Titulo",
+                "General",
+                LocalDateTime.of(2026, 6, 16, 8, 30),
+                null,
+                null,
+                "JSON",
+                null,
+                null,
+                "Razon base",
+                "Descripcion base",
+                "Pendiente");
+
+        conEstadoReporte.completarDatosDelDiagrama();
+
+        assertEquals("Pendiente", conEstadoReporte.getEstado());
+        assertEquals("2026-06-16", conEstadoReporte.getFechaReporte());
+
+        Reportes conEstado = new Reportes(
+                2L,
+                "Titulo",
+                "General",
+                null,
+                null,
+                null,
+                "JSON",
+                "Generado",
+                "2026-06-16",
+                "Razon base",
+                "Descripcion base",
+                null);
+        conEstado.completarDatosDelDiagrama();
+
+        assertEquals("Generado", conEstado.getEstadoReporte());
+
+        Reportes estadoEnBlanco = new Reportes();
+        estadoEnBlanco.setEstadoReporte(" ");
+        estadoEnBlanco.setEstado("Pendiente");
+
+        assertEquals("Pendiente", estadoEnBlanco.getEstadoReporte());
+    }
+
+    @Test
+    void reporteVentasCalculaTotalesDesdeDetalles() {
+        ReporteVentas reporte = new ReporteVentas();
+        DetalleVentas primerDetalle = new DetalleVentas();
+        primerDetalle.setMontoNeto(1000);
+        primerDetalle.setImpuestos(190);
+        DetalleVentas segundoDetalle = new DetalleVentas();
+        segundoDetalle.setMontoNeto(2000);
+        segundoDetalle.setImpuestos(380);
+        reporte.setDetalles(List.of(primerDetalle, segundoDetalle));
+
+        assertEquals(3570, reporte.calcularTotales());
+
+        reporte.setDetalles(null);
+        reporte.setTotalVentas(4500);
+
+        assertEquals(4500, reporte.calcularTotales());
+    }
+
+    @Test
+    void metricaYExportacionSincronizanReporte() {
+        Reportes reporte = reporteBase();
+        Metrica metrica = new Metrica();
+        ExportacionReporte exportacion = new ExportacionReporte();
+
+        metrica.setValor(35.5);
+        metrica.setReporte(reporte);
+        exportacion.setReporte(reporte);
+
+        assertEquals(35.5, metrica.calcularMetrica());
+        assertEquals(1L, metrica.getIdReporte());
+        assertEquals(1L, exportacion.getIdReporte());
+
+        metrica.setReporte(null);
+        exportacion.setReporte(null);
+
+        assertEquals(null, metrica.getIdReporte());
+        assertEquals(null, exportacion.getIdReporte());
+    }
+
+    @Test
+    void detallesCubrenRamasAlternativas() {
+        DetalleInventario inventario = new DetalleInventario();
+        inventario.setStockActual(10);
+        inventario.setStockMinimo(5);
+        inventario.agregarDetalle();
+        inventario.setReporteInventario(null);
+
+        DetalleSucursal sucursal = new DetalleSucursal();
+        LocalDate fecha = LocalDate.of(2026, 6, 16);
+        sucursal.setFechaRegistro(fecha);
+        sucursal.agregarDetalle();
+        sucursal.setReporteSucursal(null);
+
+        DetalleVentas ventas = new DetalleVentas();
+        ventas.agregarDetalle();
+        ventas.setReporteVentas(null);
+
+        assertEquals(false, inventario.verificarStockBajo());
+        assertEquals(null, inventario.getIdReporte());
+        assertEquals(fecha, sucursal.getFechaRegistro());
+        assertEquals(null, sucursal.getIdReporte());
+        assertEquals(0, ventas.getTotal());
+        assertEquals(null, ventas.getIdReporte());
+    }
+
+    @Test
+    void reporteInventarioIdentificaStockBajoYReporteVentasExponeSucursalPorDefecto() {
+        ReporteInventario inventario = new ReporteInventario();
+        inventario.setStockBajo(7);
+        ReporteVentas ventas = new ReporteVentas();
+
+        assertEquals(7, inventario.identificarStockBajo());
+        assertEquals(0, ventas.getIdSucursal());
     }
 
     @Test
